@@ -4,6 +4,7 @@ import { label } from '../gfx/PixelFont.js';
 import { Menu, menuBackdrop, leave, INK } from '../systems/UiKit.js';
 import { getAudio } from '../audio/AudioManager.js';
 import Save from '../systems/Save.js';
+import Touch from '../systems/TouchControls.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -44,7 +45,7 @@ export default class MenuScene extends Phaser.Scene {
     const done = Save.state.completed.length;
     label(this, W / 2, H - 26, done ? `${done} OF 3 CHAPTERS CLEARED` : 'NO ENEMIES. NO WEAPONS. ONLY THE CLIMB.', 8, INK.dim)
       .setOrigin(0.5, 0).setDepth(10);
-    label(this, W / 2, H - 14, 'ARROWS OR W S TO CHOOSE - ENTER TO CONFIRM', 8, 0x5d5044)
+    label(this, W / 2, H - 14, Touch.active ? 'TAP TO CHOOSE' : 'ARROWS OR W S TO CHOOSE - ENTER TO CONFIRM', 8, 0x5d5044)
       .setOrigin(0.5, 0).setDepth(10);
 
     // a lone torch flickering in the corner for atmosphere

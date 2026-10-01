@@ -10,6 +10,7 @@ import { MovingPlatform, FallingPlatform } from '../systems/Platforms.js';
 import { getAudio } from '../audio/AudioManager.js';
 import Save, { formatTime } from '../systems/Save.js';
 import { INK } from '../systems/UiKit.js';
+import Touch, { touchText } from '../systems/TouchControls.js';
 
 const TS = GAME.TILE;
 
@@ -88,7 +89,17 @@ export default class GameScene extends Phaser.Scene {
 
     this.showTitleCard(W, H);
 
-    this.events.on('shutdown', () => {
+    // On-screen controls live only as long as the level is actually in play.
+    Touch.show(true, () => this.pauseGame());
+    // Scene emitters outlive restarts, so these are removed again on shutdown.
+    const hideTouch = () => Touch.show(false);
+    const showTouch = () => Touch.show(true);
+    this.events.on('pause', hideTouch);
+    this.events.on('resume', showTouch);
+    this.events.once('shutdown', () => {
+      this.events.off('pause', hideTouch);
+      this.events.off('resume', showTouch);
+      Touch.show(false);
       this.input.keyboard.removeAllKeys(true);
     });
   }
@@ -268,7 +279,7 @@ export default class GameScene extends Phaser.Scene {
     this.hints = [];
     if (!Save.settings.hints) return;
     this.world.hints.forEach((h) => {
-      const t = label(this, h.x, h.y, h.text, 8, 0xd8c8a8).setOrigin(0.5, 1).setDepth(DEPTH.hint);
+      const t = label(this, h.x, h.y, touchText(h.text), 8, 0xd8c8a8).setOrigin(0.5, 1).setDepth(DEPTH.hint);
       t.setAlpha(0);
       t.setCenterAlign();
       // keep the sign inside the level so it never spills off the edge of the map
@@ -318,17 +329,19 @@ export default class GameScene extends Phaser.Scene {
 
     // JustDown has to be polled every frame or the latch survives into the next
     // one, so it is read first and gated afterwards.
-    const jJump = K.JustDown(k.jump);
-    const jUp = K.JustDown(k.up) || K.JustDown(k.aUp);
+    // Touch presses are latched the same way and merged with the keyboard.
+    const tp = Touch.state;
+    const jJump = K.JustDown(k.jump) | Touch.consume('jump');
+    const jUp = K.JustDown(k.up) | K.JustDown(k.aUp) | Touch.consume('up');
     const jInteract = K.JustDown(k.interact);
-    const jDown = K.JustDown(k.down) || K.JustDown(k.aDown);
+    const jDown = K.JustDown(k.down) | K.JustDown(k.aDown) | Touch.consume('down');
 
-    I.left = alive && (k.left.isDown || k.aLeft.isDown);
-    I.right = alive && (k.right.isDown || k.aRight.isDown);
-    I.up = alive && (k.up.isDown || k.aUp.isDown);
-    I.down = alive && (k.down.isDown || k.aDown.isDown);
-    I.run = alive && k.run.isDown;
-    I.jumpDown = alive && k.jump.isDown;
+    I.left = alive && (k.left.isDown || k.aLeft.isDown || tp.left);
+    I.right = alive && (k.right.isDown || k.aRight.isDown || tp.right);
+    I.up = alive && (k.up.isDown || k.aUp.isDown || tp.up);
+    I.down = alive && (k.down.isDown || k.aDown.isDown || tp.down);
+    I.run = alive && (k.run.isDown || tp.run);
+    I.jumpDown = alive && (k.jump.isDown || tp.jump);
     I.jumpJustDown = alive && jJump;
     I.interactJustDown = alive && (jInteract || jUp);
     I.downJustDown = alive && jDown;
@@ -458,6 +471,7 @@ export default class GameScene extends Phaser.Scene {
   complete() {
     if (this.finished) return;
     this.finished = true;
+    Touch.show(false);
     const time = this.elapsed;
     Save.complete(this.index, this.levelKey, time);
     this.audio.play('complete');

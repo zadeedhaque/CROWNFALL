@@ -3,6 +3,7 @@ import { label } from '../gfx/PixelFont.js';
 import { panel, rule, Menu, menuBackdrop, leave, INK } from '../systems/UiKit.js';
 import { getAudio } from '../audio/AudioManager.js';
 import Save from '../systems/Save.js';
+import Touch, { enterFullscreen, exitFullscreen, isFullscreen } from '../systems/TouchControls.js';
 
 const onOff = (v) => (v ? 'ON' : 'OFF');
 
@@ -68,15 +69,24 @@ export default class SettingsScene extends Phaser.Scene {
           }
         }
       },
+      {
+        // Not saved: browsers only allow fullscreen from a tap or key press.
+        text: 'FULLSCREEN   ' + onOff(isFullscreen()),
+        onSelect: () => {
+          if (isFullscreen()) exitFullscreen(); else enterFullscreen();
+          // the switch is asynchronous; read the real state back a moment later
+          this.time.delayedCall(350, () => this.menu.setText(5, 'FULLSCREEN   ' + onOff(isFullscreen())));
+        }
+      },
       { text: 'BACK', onSelect: () => leave(this, () => this.scene.start('Menu'), 180) }
     ];
 
-    this.menu = new Menu(this, W / 2, 60, items, { spacing: 16 });
+    this.menu = new Menu(this, W / 2, 58, items, { spacing: 15 });
     this.menu.rows.forEach((r) => r.setDepth(11));
     this.menu.caretL.setDepth(11);
     this.menu.caretR.setDepth(11);
 
-    label(this, W / 2, H - 28, 'LEFT / RIGHT OR ENTER TO TOGGLE', 8, INK.dim).setOrigin(0.5, 0).setDepth(11);
+    label(this, W / 2, H - 28, Touch.active ? 'TAP A SETTING TO TOGGLE' : 'LEFT / RIGHT OR ENTER TO TOGGLE', 8, INK.dim).setOrigin(0.5, 0).setDepth(11);
 
     this.input.keyboard.on('keydown-ESC', () => leave(this, () => this.scene.start('Menu'), 180));
   }

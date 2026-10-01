@@ -3,6 +3,7 @@ import { label } from '../gfx/PixelFont.js';
 import { panel, rule, Menu, INK } from '../systems/UiKit.js';
 import { getAudio } from '../audio/AudioManager.js';
 import Save from '../systems/Save.js';
+import Touch from '../systems/TouchControls.js';
 
 /** Overlay scene; GameScene stays alive underneath, simply paused. */
 export default class PauseScene extends Phaser.Scene {
@@ -50,7 +51,7 @@ export default class PauseScene extends Phaser.Scene {
 
     this.menu = new Menu(this, W / 2, 92, items, { spacing: 16 });
 
-    label(this, W / 2, H - 34, 'ESC TO RESUME', 8, INK.dim).setOrigin(0.5, 0);
+    label(this, W / 2, H - 34, Touch.active ? 'TAP RESUME TO PLAY ON' : 'ESC TO RESUME', 8, INK.dim).setOrigin(0.5, 0);
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
   }

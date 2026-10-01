@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Crownfall" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="manifest" href="./manifest.webmanifest" />
 <title>Crownfall</title>
 <meta name="description" content="Crownfall - a 2D pixel-art parkour platformer through an abandoned desert fortress. No enemies, no combat, only movement." />
 <meta name="application-name" content="Crownfall" />
@@ -20,9 +26,15 @@
     width: 100%; height: 100%; overflow: hidden;
     background: #0b0910;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    /* phones: no pinch zoom, double-tap zoom, pull-to-refresh, text selection or callouts */
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
   #game {
-    width: 100vw; height: 100vh;
+    width: 100vw; height: 100vh; height: 100dvh;
     display: flex; align-items: center; justify-content: center;
   }
   #game canvas {
@@ -41,11 +53,82 @@
   #splash.hidden { opacity: 0; }
   #splash .bar { width: 180px; height: 4px; background: #241c2b; overflow: hidden; }
   #splash .bar i { display: block; height: 100%; width: 35%; background: #c8a96a; animation: sweep 1.1s infinite ease-in-out; }
+  /* ------------------------------------------------ on-screen touch controls */
+  .tc { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: none; }
+  .tc.show { display: block; }
+  .tc > * { pointer-events: auto; touch-action: none; }
+  .tc-pad {
+    position: absolute;
+    left: calc(env(safe-area-inset-left) + 3vh); bottom: calc(env(safe-area-inset-bottom) + 4vh);
+    width: 42vh; height: 42vh; min-width: 132px; min-height: 132px; max-width: 220px; max-height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(20,15,28,.25) 0 55%, rgba(20,15,28,.45) 56% 100%);
+    border: 2px solid rgba(232,188,90,.22);
+  }
+  .tc-arrow {
+    position: absolute; width: 33%; height: 33%;
+    background: rgba(20,15,28,.55); border: 2px solid rgba(232,188,90,.45);
+    border-radius: 22%; display: flex; align-items: center; justify-content: center;
+    transition: background .06s, transform .06s;
+  }
+  .tc-arrow.on { background: rgba(232,188,90,.55); border-color: #e8bc5a; transform: scale(.93); }
+  .tc-up    { left: 33.5%; top: 2%; }
+  .tc-down  { left: 33.5%; bottom: 2%; }
+  .tc-left  { left: 2%; top: 33.5%; }
+  .tc-right { right: 2%; top: 33.5%; }
+  .tc-arrow i { width: 0; height: 0; border: 9px solid transparent; }
+  .tc-up i    { border-bottom: 12px solid #f0e0c0; margin-top: -10px; }
+  .tc-down i  { border-top: 12px solid #f0e0c0; margin-bottom: -10px; }
+  .tc-left i  { border-right: 12px solid #f0e0c0; margin-left: -10px; }
+  .tc-right i { border-left: 12px solid #f0e0c0; margin-right: -10px; }
+  .tc-hub {
+    position: absolute; left: 40%; top: 40%; width: 20%; height: 20%;
+    border-radius: 50%; background: rgba(232,188,90,.18); pointer-events: none;
+  }
+  .tc-btn {
+    position: absolute; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #f0e0c0; font-weight: 700; letter-spacing: .12em;
+    background: rgba(20,15,28,.55); border: 2px solid rgba(232,188,90,.5);
+    transition: background .06s, transform .06s;
+  }
+  .tc-btn.on { background: rgba(232,188,90,.55); border-color: #e8bc5a; color: #140f1c; transform: scale(.94); }
+  .tc-jump {
+    right: calc(env(safe-area-inset-right) + 4vh); bottom: calc(env(safe-area-inset-bottom) + 6vh);
+    width: 26vh; height: 26vh; min-width: 84px; min-height: 84px; max-width: 140px; max-height: 140px;
+    font-size: clamp(12px, 4vh, 18px);
+  }
+  .tc-run {
+    right: calc(env(safe-area-inset-right) + 32vh); bottom: calc(env(safe-area-inset-bottom) + 4vh);
+    width: 17vh; height: 17vh; min-width: 58px; min-height: 58px; max-width: 92px; max-height: 92px;
+    font-size: clamp(10px, 3vh, 14px);
+  }
+  .tc-pause {
+    right: calc(env(safe-area-inset-right) + 3vh); top: calc(env(safe-area-inset-top) + 9vh);
+    width: 11vh; height: 11vh; min-width: 40px; min-height: 40px; max-width: 56px; max-height: 56px;
+    border-radius: 22%; font-size: clamp(10px, 3vh, 14px); letter-spacing: .05em;
+  }
+
+  /* phones held upright: the game is landscape-only */
+  #rotate {
+    position: fixed; inset: 0; z-index: 20; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: #0b0910; color: #c8a96a; letter-spacing: .28em; font-size: 13px;
+    text-transform: uppercase; text-align: center; padding: 24px;
+  }
+  #rotate .phone {
+    width: 46px; height: 78px; border: 3px solid #c8a96a; border-radius: 8px;
+    animation: tilt 2.2s infinite ease-in-out;
+  }
+  @keyframes tilt { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+  @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
+
   @keyframes sweep { 0% { transform: translateX(-110%);} 100% { transform: translateX(330%);} }
 </style>
 </head>
 <body>
   <div id="game"></div>
+  <div id="rotate"><div class="phone"></div><div>Turn your phone sideways</div></div>
   <div id="splash"><div>Crownfall</div><div class="bar"><i></i></div></div>
   <script>
     // Surface fatal errors instead of leaving a black canvas.
