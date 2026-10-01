@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME } from './config.js';
+import Touch from './systems/TouchControls.js';
 
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
@@ -44,7 +45,15 @@ const config = {
   ]
 };
 
+Touch.init();
+
 const game = new Phaser.Game(config);
+
+// iOS only lets audio start from a touchend, not the pointerdown Phaser sees.
+window.addEventListener('touchend', () => {
+  const audio = game.registry.get('audio');
+  if (audio) audio.unlock();
+}, { passive: true });
 
 // Handy during development: inspect scenes and the player from the console.
 if (import.meta.env && import.meta.env.DEV) window.game = game;
@@ -58,6 +67,9 @@ game.events.once('ready', () => {
 });
 
 // Keep the browser from scrolling / triggering quick-find while playing.
+// Long-press on a phone would otherwise open the browser's context menu.
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+
 window.addEventListener('keydown', (e) => {
   if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', "'", '/'].includes(e.key)) {
     e.preventDefault();

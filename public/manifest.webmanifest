@@ -1,0 +1,10 @@
+{
+  "name": "Crownfall",
+  "short_name": "Crownfall",
+  "description": "A 2D pixel-art parkour platformer. No enemies, no weapons - only the climb.",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0910",
+  "theme_color": "#0d0a12"
+}

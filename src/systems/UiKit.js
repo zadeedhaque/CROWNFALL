@@ -60,7 +60,12 @@ export class Menu {
     items.forEach((item, i) => {
       const t = label(scene, x, y + i * this.spacing, item.text, this.size);
       t.setOrigin(0.5, 0);
-      t.setInteractive({ useHandCursor: item.enabled !== false });
+      t.setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(0, 0, 1, 1),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: item.enabled !== false
+      });
+      this.fitHitArea(t);
       t.on('pointerover', () => { if (item.enabled !== false) this.moveTo(i); });
       t.on('pointerdown', () => { if (item.enabled !== false) { this.moveTo(i); this.choose(); } });
       this.rows.push(t);
@@ -88,6 +93,17 @@ export class Menu {
   setText(i, text) {
     this.items[i].text = text;
     this.rows[i].setText(String(text).toUpperCase());
+    this.fitHitArea(this.rows[i]);
+  }
+
+  /**
+   * Make a row tappable well beyond its glyphs - an 8px line of text is far too
+   * small a target for a thumb - without overlapping the rows around it.
+   */
+  fitHitArea(t) {
+    const w = Math.max(t.width + 48, 150);
+    const padY = Math.max(2, Math.floor((this.spacing - t.height) / 2));
+    t.input.hitArea.setTo(t.width / 2 - w / 2, -padY, w, t.height + padY * 2);
   }
 
   moveTo(i) {
