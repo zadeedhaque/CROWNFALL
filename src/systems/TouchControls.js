@@ -206,6 +206,37 @@ export function exitFullscreen() {
   if (exit && isFullscreen()) exit.call(document);
 }
 
+/* ------------------------------------------------------------ zoom guard */
+
+/**
+ * iOS Safari ignores `user-scalable=no` and treats two quick taps as a zoom,
+ * which a jump button gets constantly. Only cancelling the raw touch events
+ * stops it; pointer events (which the controls and Phaser use) still fire.
+ */
+function blockBrowserZoom() {
+  const stop = (e) => { if (e.cancelable) e.preventDefault(); };
+
+  // The controls never want any native touch behaviour at all.
+  root.addEventListener('touchstart', stop, { passive: false });
+  root.addEventListener('touchend', stop, { passive: false });
+  root.addEventListener('touchmove', stop, { passive: false });
+
+  // Everywhere else (canvas, letterbox bars): cancel only the second tap of a
+  // double-tap, so single taps still behave normally.
+  let lastEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = e.timeStamp;
+    if (now - lastEnd < 350) stop(e);
+    lastEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', stop, { passive: false });
+
+  // Pinch zoom.
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) stop(e); }, { passive: false });
+  document.addEventListener('gesturestart', stop, { passive: false });
+  document.addEventListener('gesturechange', stop, { passive: false });
+}
+
 /* -------------------------------------------------------------- the API */
 
 const Touch = {
@@ -220,6 +251,8 @@ const Touch = {
     // Any touch switches to touch mode; a physical key press switches back.
     window.addEventListener('touchstart', () => setTouchMode(true), { passive: true });
     window.addEventListener('keydown', () => setTouchMode(false));
+
+    blockBrowserZoom();
 
     // The first tap goes fullscreen + landscape where the browser allows it.
     let tried = false;
